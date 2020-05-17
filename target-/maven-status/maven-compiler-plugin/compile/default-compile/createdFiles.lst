@@ -1,5 +1,0 @@
-co\edu\uniandes\csw\postman\interfaces\IPostmanDir.class
-co\edu\uniandes\csw\postman\utils\CollectionBuilder.class
-co\edu\uniandes\csw\postman\utils\PathBuilder.class
-co\edu\uniandes\csw\postman\tests\PostmanTestBuilder.class
-co\edu\uniandes\csw\postman\interfaces\IPostmanCollections.class
