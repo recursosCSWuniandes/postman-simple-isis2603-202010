@@ -7,7 +7,7 @@ package co.edu.uniandes.csw.postman.utils;
 
 /**
  *
- * @author josebocanegra
+ * @author Jose Bocanegra
  */
 public class OSValidator {
 
