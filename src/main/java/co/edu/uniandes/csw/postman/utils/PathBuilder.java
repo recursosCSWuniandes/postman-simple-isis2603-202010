@@ -15,7 +15,7 @@ import java.io.File;
  */
 public final class PathBuilder implements IPostmanDir{
     private  File pub;
-    private String PATH =  System.getProperty("user.dir").concat("\\collections");
+    private String PATH =  System.getProperty("user.dir").concat(File.separator).concat("collections");
 
     public PathBuilder() {
         this.pub = new File( getPATH());

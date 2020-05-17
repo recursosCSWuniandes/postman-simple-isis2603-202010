@@ -5,16 +5,18 @@
  */
 package co.edu.uniandes.csw.postman.tests;
 
-import co.edu.uniandes.csw.postman.utils.CollectionBuilder;
+import co.edu.uniandes.csw.postman.utils.OSValidator;
 import co.edu.uniandes.csw.postman.utils.PathBuilder;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.InputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.ProcessBuilder.Redirect;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -29,10 +31,6 @@ public class PostmanTestBuilder {
     private String coll;
     private String options;
     private PathBuilder path;
-    private CollectionBuilder cb;
-    private Process process;
-    private InputStream inputStream;
-    private BufferedReader bf;
     private String line;
     private String ln;
     private String requests_failed;
@@ -43,14 +41,13 @@ public class PostmanTestBuilder {
     private File tmp;
     private File output;
     private BufferedWriter bw;
+    private String command;
 
     public PostmanTestBuilder() {
         path = new PathBuilder();
         env = " -e ";
         coll = "newman run ";
         options = " -r json-summary --reporter-summary-json-export ";
-        line = "";
-        ln = null;
         prerequest_scripts_failed = null;
         test_scripts_failed = null;
         assertions_failed = null;
@@ -58,56 +55,19 @@ public class PostmanTestBuilder {
         requests_failed = null;
     }
 
-    public void setTestWithoutLogin(String collectionName) throws IOException {
-        int fileCount = path.getFiles().length;
-
-        if (path.validateDir() && fileCount > 0) {
-            for (File f : path.getFiles()) {
-
-                cb = new CollectionBuilder(f);
-                if (cb.isCollection(collectionName)) {
-                    coll = coll.concat(path.getPATH().concat("\\").concat(cb.getOriginalName()));
-                    System.out.println("comando y ruta de ejecucion");
-                    System.out.println(coll);
-                    fileCount--;
-                } else {
-                    if (fileCount == 0) {
-                        try {
-                            throw new IOException();
-                        } catch (IOException ie) {
-                            System.out.println(ie.getMessage() + " no se encontro archivo: " + coll);
-                        }
-                    }
-                }
-            }
-        }
-        tmp = File.createTempFile(collectionName, ".bat");
-        bw = new BufferedWriter(new FileWriter(tmp));
-        bw.write(coll.concat(" --disable-unicode"));
-        bw.close();
-        tmp.setExecutable(true);
-        startProcess();
-
-    }
-
     public void setTestWithoutLogin(String collectionName, String environmentName) throws IOException {
+        String path = System.getProperty("user.dir").concat(File.separator).concat("collections");
 
-        if (path.validateDir()) {
-            for (File f : path.getFiles()) {
-                cb = new CollectionBuilder(f);
+        //environment
+        env = env.concat(path).concat(File.separator).concat(environmentName + ".json");
 
-                if (cb.isEnvironment(environmentName)) {
-                    env = env.concat(path.getPATH().concat("\\").concat(cb.getOriginalName() + " --disable-unicode"));
-                }
+        //collection
+        coll = coll.concat(path).concat(File.separator).concat(collectionName + ".json");
 
-                if (cb.isCollection(collectionName)) {
-                    coll = coll.concat(path.getPATH().concat("\\").concat(cb.getOriginalName()));
-                }
-            }
-        }
         tmp = File.createTempFile(collectionName, ".bat");
         output = File.createTempFile("output", ".json");
         bw = new BufferedWriter(new FileWriter(tmp));
+        command = coll.concat(options).concat(output.getAbsolutePath()).concat(env);
         bw.write(coll.concat(options).concat(output.getAbsolutePath()).concat(env));
         bw.close();
         tmp.setExecutable(true);
@@ -115,14 +75,30 @@ public class PostmanTestBuilder {
     }
 
     private void startProcess() {
-
         try {
-            System.out.println("ELeavin.." + output.getAbsolutePath());
-            process = Runtime.getRuntime().exec(tmp.getAbsolutePath());
-            process.waitFor();
+            ProcessBuilder processBuilder;
+            if (OSValidator.isWindows()) {
+                processBuilder = new ProcessBuilder(tmp.getAbsolutePath());
+            } else {
+                processBuilder = new ProcessBuilder("bash", "-c", tmp.getAbsolutePath());
+                Map<String, String> environment = processBuilder.environment();
+                processBuilder.directory(new File(System.getProperty("user.home")));
+                String e = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" +System.getProperty("user.home") +"/.npm-global/bin:/Library/TeX/texbin:/opt/X11/bin";
+                environment.put("PATH", e);
+            }
 
-            JSONParser parser = new JSONParser();
+            processBuilder.redirectInput(Redirect.INHERIT);
+            processBuilder.redirectOutput(Redirect.INHERIT);
+            processBuilder.redirectError(Redirect.INHERIT);
+
             try {
+                processBuilder.start().waitFor();
+            } catch (InterruptedException ex) {
+                Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            try {
+                JSONParser parser = new JSONParser();
                 Object obj = parser.parse(new FileReader(output.getAbsolutePath()));
                 JSONObject jsonObject = (JSONObject) obj;
                 JSONObject run = (JSONObject) jsonObject.get("Run");
@@ -134,17 +110,16 @@ public class PostmanTestBuilder {
                 System.out.println(requests_failed);
                 System.out.println(assertions_failed);
 
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
-                e.printStackTrace();
+            } catch (FileNotFoundException ex) {
+                ex.printStackTrace();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            } catch (ParseException ex) {
+                ex.printStackTrace();
             }
-        } catch (Exception ex) {
+        } catch (IOException ex) {
+            Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
         }
-        tmp.deleteOnExit();
-        output.deleteOnExit();
     }
 
     /**
@@ -181,5 +156,4 @@ public class PostmanTestBuilder {
     public String getPrerequest_scripts_failed() {
         return prerequest_scripts_failed;
     }
-
 }
