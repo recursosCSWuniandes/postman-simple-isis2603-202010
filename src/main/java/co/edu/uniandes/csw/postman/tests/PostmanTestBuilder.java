@@ -83,7 +83,7 @@ public class PostmanTestBuilder {
                 processBuilder = new ProcessBuilder("bash", "-c", tmp.getAbsolutePath());
                 Map<String, String> environment = processBuilder.environment();
                 processBuilder.directory(new File(System.getProperty("user.home")));
-                String e = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" +System.getProperty("user.home") +"/.npm-global/bin:/Library/TeX/texbin:/opt/X11/bin";
+                String e = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + System.getProperty("user.home") + "/.npm-global/bin:/Library/TeX/texbin:/opt/X11/bin";
                 environment.put("PATH", e);
             }
 
@@ -120,6 +120,8 @@ public class PostmanTestBuilder {
         } catch (IOException ex) {
             Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
         }
+        tmp.deleteOnExit();
+        output.deleteOnExit();
     }
 
     /**
