@@ -79,7 +79,7 @@ public class PostmanTestBuilder {
         LOGGER.log(Level.INFO, "Collection name: {0}", path.concat(File.separator).concat(collectionName + ".json"));
         LOGGER.log(Level.INFO, "Environment name: {0}", path.concat(File.separator).concat(environmentName + ".json"));
         LOGGER.log(Level.INFO, "Output file name: {0}", output.getAbsolutePath());
-        LOGGER.log(Level.INFO, "Command for excecution: {0}", command);
+        LOGGER.log(Level.INFO, "Command for newman: {0}", command);
 
         startProcess();
     }
