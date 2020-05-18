@@ -15,8 +15,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
 import java.util.Map;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -42,6 +44,8 @@ public class PostmanTestBuilder {
     private File output;
     private BufferedWriter bw;
     private String command;
+
+    private static final Logger LOGGER = Logger.getLogger(PostmanTestBuilder.class.getName());
 
     public PostmanTestBuilder() {
         path = new PathBuilder();
@@ -71,6 +75,12 @@ public class PostmanTestBuilder {
         bw.write(coll.concat(options).concat(output.getAbsolutePath()).concat(env));
         bw.close();
         tmp.setExecutable(true);
+
+        LOGGER.log(Level.INFO, "Collection name: {0}", path.concat(File.separator).concat(collectionName + ".json"));
+        LOGGER.log(Level.INFO, "Environment name: {0}", path.concat(File.separator).concat(environmentName + ".json"));
+        LOGGER.log(Level.INFO, "Output file name: {0}", output.getAbsolutePath());
+        LOGGER.log(Level.INFO, "Command for excecution: {0}", command);
+
         startProcess();
     }
 
@@ -107,8 +117,6 @@ public class PostmanTestBuilder {
                 JSONObject assertions = (JSONObject) stats.get("Assertions");
                 requests_failed = String.valueOf((long) requests.get("failed"));
                 assertions_failed = String.valueOf((long) assertions.get("failed"));
-                System.out.println(requests_failed);
-                System.out.println(assertions_failed);
 
             } catch (FileNotFoundException ex) {
                 ex.printStackTrace();
