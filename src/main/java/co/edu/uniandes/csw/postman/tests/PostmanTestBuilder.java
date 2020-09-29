@@ -40,9 +40,9 @@ public class PostmanTestBuilder {
     private String assertions_failed;
     private String test_scripts_failed;
     private String prerequest_scripts_failed;
-    private File tmp;
+    private File tmp, tmpNewman;
     private File output;
-    private BufferedWriter bw;
+    private BufferedWriter bw, bwNewman;
     private String command;
 
     private static final Logger LOGGER = Logger.getLogger(PostmanTestBuilder.class.getName());
@@ -76,6 +76,12 @@ public class PostmanTestBuilder {
         bw.close();
         tmp.setExecutable(true);
 
+        tmpNewman = File.createTempFile("tmpNewman", ".bat");
+        bwNewman = new BufferedWriter(new FileWriter(tmpNewman));
+        bwNewman.write(coll.concat(env));
+        bwNewman.close();
+        tmpNewman.setExecutable(true);
+
         LOGGER.log(Level.INFO, "Collection name: {0}", path.concat(File.separator).concat(collectionName + ".json"));
         LOGGER.log(Level.INFO, "Environment name: {0}", path.concat(File.separator).concat(environmentName + ".json"));
         LOGGER.log(Level.INFO, "Output file name: {0}", output.getAbsolutePath());
@@ -87,22 +93,35 @@ public class PostmanTestBuilder {
     private void startProcess() {
         try {
             ProcessBuilder processBuilder;
+            ProcessBuilder processBuilderNewman;
             if (OSValidator.isWindows()) {
                 processBuilder = new ProcessBuilder(tmp.getAbsolutePath());
+                processBuilderNewman = new ProcessBuilder(tmpNewman.getAbsolutePath());
             } else {
                 processBuilder = new ProcessBuilder("bash", "-c", tmp.getAbsolutePath());
                 Map<String, String> environment = processBuilder.environment();
                 processBuilder.directory(new File(System.getProperty("user.home")));
                 String e = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + System.getProperty("user.home") + "/.npm-global/bin:/Library/TeX/texbin:/opt/X11/bin";
                 environment.put("PATH", e);
+
+                processBuilderNewman = new ProcessBuilder("bash", "-c", tmpNewman.getAbsolutePath());
+                Map<String, String> environmentNewman = processBuilderNewman.environment();
+                processBuilderNewman.directory(new File(System.getProperty("user.home")));
+                String f = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + System.getProperty("user.home") + "/.npm-global/bin:/Library/TeX/texbin:/opt/X11/bin";
+                environmentNewman.put("PATH", f);
             }
 
             processBuilder.redirectInput(Redirect.INHERIT);
             processBuilder.redirectOutput(Redirect.INHERIT);
             processBuilder.redirectError(Redirect.INHERIT);
 
+            processBuilderNewman.redirectInput(Redirect.INHERIT);
+            processBuilderNewman.redirectOutput(Redirect.INHERIT);
+            processBuilderNewman.redirectError(Redirect.INHERIT);
+
             try {
                 processBuilder.start().waitFor();
+                processBuilderNewman.start().waitFor();
             } catch (InterruptedException ex) {
                 Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
             }

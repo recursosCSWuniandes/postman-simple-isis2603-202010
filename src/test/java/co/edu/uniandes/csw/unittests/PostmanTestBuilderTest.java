@@ -45,9 +45,8 @@ public class PostmanTestBuilderTest {
     @Test
     public void testPostmanTestBuilder() throws IOException {
         PostmanTestBuilder tp = new PostmanTestBuilder();
-        tp.setTestWithoutLogin("Author-Tests-Paso5.postman_collection", "Entorno-Colecciones-Book.postman_environment");
+        tp.setTestWithoutLogin("AuthorTests.postman_collection", "Entorno-Colecciones-Book.postman_environment");
         assertEquals(tp.getAssertions_failed(), "0");
-        assertEquals(tp.getRequests_failed(), "0");
-                
+        assertEquals(tp.getRequests_failed(), "0");           
     }
 }
