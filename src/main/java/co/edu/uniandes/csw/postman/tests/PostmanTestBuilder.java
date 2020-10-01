@@ -6,7 +6,6 @@
 package co.edu.uniandes.csw.postman.tests;
 
 import co.edu.uniandes.csw.postman.utils.OSValidator;
-import co.edu.uniandes.csw.postman.utils.PathBuilder;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -15,10 +14,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
 import java.util.Map;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -29,33 +26,24 @@ import org.json.simple.parser.ParseException;
  */
 public class PostmanTestBuilder {
 
-    private String env;
-    private String coll;
-    private String options;
-    private PathBuilder path;
-    private String line;
-    private String ln;
+    private String environment;
+    private String collection;
+    private final String options;
     private String requests_failed;
-    private String iterations_failed;
     private String assertions_failed;
-    private String test_scripts_failed;
-    private String prerequest_scripts_failed;
-    private File tmp, tmpNewman;
+    private File tmpGeneral, tmpNewman;
     private File output;
-    private BufferedWriter bw, bwNewman;
+    private BufferedWriter bwGeneral, bwNewman;
     private String command;
 
     private static final Logger LOGGER = Logger.getLogger(PostmanTestBuilder.class.getName());
 
     public PostmanTestBuilder() {
-        path = new PathBuilder();
-        env = " -e ";
-        coll = "newman run ";
+        //path = new PathBuilder();
+        environment = " -e ";
+        collection = "newman run ";
         options = " -r json-summary --reporter-summary-json-export ";
-        prerequest_scripts_failed = null;
-        test_scripts_failed = null;
         assertions_failed = null;
-        iterations_failed = null;
         requests_failed = null;
     }
 
@@ -63,22 +51,22 @@ public class PostmanTestBuilder {
         String path = System.getProperty("user.dir").concat(File.separator).concat("collections");
 
         //environment
-        env = env.concat(path).concat(File.separator).concat(environmentName + ".json");
+        environment = environment.concat(path).concat(File.separator).concat(environmentName + ".json");
 
         //collection
-        coll = coll.concat(path).concat(File.separator).concat(collectionName + ".json");
+        collection = collection.concat(path).concat(File.separator).concat(collectionName + ".json");
 
-        tmp = File.createTempFile(collectionName, ".bat");
+        tmpGeneral = File.createTempFile(collectionName, ".bat");
         output = File.createTempFile("output", ".json");
-        bw = new BufferedWriter(new FileWriter(tmp));
-        command = coll.concat(options).concat(output.getAbsolutePath()).concat(env);
-        bw.write(coll.concat(options).concat(output.getAbsolutePath()).concat(env));
-        bw.close();
-        tmp.setExecutable(true);
+        bwGeneral = new BufferedWriter(new FileWriter(tmpGeneral));
+        command = collection.concat(options).concat(output.getAbsolutePath()).concat(environment);
+        bwGeneral.write(collection.concat(options).concat(output.getAbsolutePath()).concat(environment));
+        bwGeneral.close();
+        tmpGeneral.setExecutable(true);
 
         tmpNewman = File.createTempFile("tmpNewman", ".bat");
         bwNewman = new BufferedWriter(new FileWriter(tmpNewman));
-        bwNewman.write(coll.concat(env));
+        bwNewman.write(collection.concat(environment));
         bwNewman.close();
         tmpNewman.setExecutable(true);
 
@@ -92,35 +80,34 @@ public class PostmanTestBuilder {
 
     private void startProcess() {
         try {
-            ProcessBuilder processBuilder;
+            ProcessBuilder processBuilderGeneral;
             ProcessBuilder processBuilderNewman;
             if (OSValidator.isWindows()) {
-                processBuilder = new ProcessBuilder(tmp.getAbsolutePath());
+                processBuilderGeneral = new ProcessBuilder(tmpGeneral.getAbsolutePath());
                 processBuilderNewman = new ProcessBuilder(tmpNewman.getAbsolutePath());
             } else {
-                processBuilder = new ProcessBuilder("bash", "-c", tmp.getAbsolutePath());
-                Map<String, String> environment = processBuilder.environment();
-                processBuilder.directory(new File(System.getProperty("user.home")));
+                processBuilderGeneral = new ProcessBuilder("bash", "-c", tmpGeneral.getAbsolutePath());
+                Map<String, String> environmentGeneral = processBuilderGeneral.environment();
+                processBuilderGeneral.directory(new File(System.getProperty("user.home")));
                 String e = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + System.getProperty("user.home") + "/.npm-global/bin:/Library/TeX/texbin:/opt/X11/bin";
-                environment.put("PATH", e);
+                environmentGeneral.put("PATH", e);
 
                 processBuilderNewman = new ProcessBuilder("bash", "-c", tmpNewman.getAbsolutePath());
                 Map<String, String> environmentNewman = processBuilderNewman.environment();
                 processBuilderNewman.directory(new File(System.getProperty("user.home")));
-                String f = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + System.getProperty("user.home") + "/.npm-global/bin:/Library/TeX/texbin:/opt/X11/bin";
-                environmentNewman.put("PATH", f);
+                environmentNewman.put("PATH", e);
             }
 
-            processBuilder.redirectInput(Redirect.INHERIT);
-            processBuilder.redirectOutput(Redirect.INHERIT);
-            processBuilder.redirectError(Redirect.INHERIT);
+            processBuilderGeneral.redirectInput(Redirect.INHERIT);
+            processBuilderGeneral.redirectOutput(Redirect.INHERIT);
+            processBuilderGeneral.redirectError(Redirect.INHERIT);
 
             processBuilderNewman.redirectInput(Redirect.INHERIT);
             processBuilderNewman.redirectOutput(Redirect.INHERIT);
             processBuilderNewman.redirectError(Redirect.INHERIT);
 
             try {
-                processBuilder.start().waitFor();
+                processBuilderGeneral.start().waitFor();
                 processBuilderNewman.start().waitFor();
             } catch (InterruptedException ex) {
                 Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
@@ -138,16 +125,15 @@ public class PostmanTestBuilder {
                 assertions_failed = String.valueOf((long) assertions.get("failed"));
 
             } catch (FileNotFoundException ex) {
-                ex.printStackTrace();
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            } catch (ParseException ex) {
-                ex.printStackTrace();
+                Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException | ParseException ex) {
+                Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
             }
         } catch (IOException ex) {
             Logger.getLogger(PostmanTestBuilder.class.getName()).log(Level.SEVERE, null, ex);
         }
-        tmp.deleteOnExit();
+        tmpGeneral.deleteOnExit();
+        tmpNewman.deleteOnExit();
         output.deleteOnExit();
     }
 
@@ -159,30 +145,9 @@ public class PostmanTestBuilder {
     }
 
     /**
-     * @return the iterations_failed
-     */
-    public String getIterations_failed() {
-        return iterations_failed;
-    }
-
-    /**
      * @return the assertions_failed
      */
     public String getAssertions_failed() {
         return assertions_failed;
-    }
-
-    /**
-     * @return the test_scripts_failed
-     */
-    public String getTest_scripts_failed() {
-        return test_scripts_failed;
-    }
-
-    /**
-     * @return the prerequest_scripts_failed
-     */
-    public String getPrerequest_scripts_failed() {
-        return prerequest_scripts_failed;
     }
 }
